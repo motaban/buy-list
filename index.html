@@ -1,0 +1,297 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista de Compras</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #2f2f2f;
+            color: #f1f1f1;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            background-color: #333333;
+            border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            padding: 20px;
+            width: 600px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: 20px;
+            color: #fff;
+        }
+
+        .add-product, .product-list, .purchase-history {
+            margin-bottom: 20px;
+        }
+
+        input {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #888;
+            border-radius: 5px;
+            background-color: #444;
+            color: #fff;
+        }
+
+        button {
+            background-color: #6c757d;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+
+        button:hover {
+            background-color: #5a636c;
+        }
+
+        .delete-button {
+            background-color: #e74c3c;
+        }
+
+        .delete-button:hover {
+            background-color: #c0392b;
+        }
+
+        .save-button {
+            background-color: #2ecc71;
+        }
+
+        .save-button:hover {
+            background-color: #27ae60;
+        }
+
+        .history-button {
+            background-color: #3498db;
+        }
+
+        .history-button:hover {
+            background-color: #2980b9;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+            margin: 15px 0;
+            background-color: #444;
+            padding: 10px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        li button {
+            background-color: #e74c3c;
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        li button:hover {
+            background-color: #c0392b;
+        }
+
+        p {
+            color: #f1f1f1;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Lista de Compras</h1>
+
+        <!-- Formulario para agregar productos -->
+        <div class="add-product">
+            <input type="text" id="product-name" placeholder="Nombre del producto" />
+            <input type="number" id="product-quantity" placeholder="Cantidad" />
+            <button id="add-product">Agregar Producto</button>
+        </div>
+
+        <!-- Lista de productos -->
+        <div class="product-list">
+            <h2>Productos:</h2>
+            <ul id="product-list-ul">
+                <!-- Los productos serán listados aquí -->
+            </ul>
+            <p>Total Gastado: $<span id="total-spent">0.00</span></p>
+            <button id="clear-products" class="delete-button">Eliminar Todos los Productos</button>
+            <button id="finalize-purchase" class="save-button">Finalizar Compras y Guardar</button>
+        </div>
+
+        <!-- Historial de Compras -->
+        <div class="purchase-history">
+            <h2>Historial de Compras</h2>
+            <button id="view-history" class="history-button">Ver Historial</button>
+            <ul id="purchase-history-ul">
+                <!-- Aquí se mostrarán los productos del historial -->
+            </ul>
+            <button id="clear-history" class="delete-button">Eliminar Todo el Historial</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const addProductButton = document.getElementById('add-product');
+            const productNameInput = document.getElementById('product-name');
+            const productQuantityInput = document.getElementById('product-quantity');
+            const productList = document.getElementById('product-list-ul');
+            const totalSpentElement = document.getElementById('total-spent');
+            const clearProductsButton = document.getElementById('clear-products');
+            const finalizePurchaseButton = document.getElementById('finalize-purchase');
+            const viewHistoryButton = document.getElementById('view-history');
+            const purchaseHistoryList = document.getElementById('purchase-history-ul');
+            const clearHistoryButton = document.getElementById('clear-history');
+
+            // Cargar datos desde localStorage
+            let productListArray = JSON.parse(localStorage.getItem('productList')) || [];
+            let purchaseHistory = JSON.parse(localStorage.getItem('purchaseHistory')) || [];
+
+            // Actualizar la lista de productos
+            updateProductList();
+            updateTotalSpent();
+
+            // Función para agregar productos
+            addProductButton.addEventListener('click', () => {
+                const productName = productNameInput.value.trim();
+                const productQuantity = parseInt(productQuantityInput.value.trim());
+
+                if (productName && productQuantity && !isNaN(productQuantity)) {
+                    const product = {
+                        name: productName,
+                        quantity: productQuantity,
+                        price: 0,  // El precio se actualizará más tarde
+                    };
+                    productListArray.push(product);
+                    saveProductList();
+                    updateProductList();
+                    updateTotalSpent();
+                    productNameInput.value = '';
+                    productQuantityInput.value = '';
+                }
+            });
+
+            // Función para actualizar la lista de productos
+            function updateProductList() {
+                productList.innerHTML = '';
+                productListArray.forEach((product, index) => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        ${product.name} x ${product.quantity} 
+                        <input type="number" class="price-input" data-index="${index}" placeholder="Precio" />
+                        <button onclick="removeProduct(${index})">Eliminar</button>
+                    `;
+                    productList.appendChild(li);
+                });
+                addPriceInputsEventListeners();
+            }
+
+            // Función para agregar los event listeners a los inputs de precio
+            function addPriceInputsEventListeners() {
+                const priceInputs = document.querySelectorAll('.price-input');
+                priceInputs.forEach(input => {
+                    input.addEventListener('change', (e) => {
+                        const index = e.target.getAttribute('data-index');
+                        const price = parseFloat(e.target.value);
+                        if (!isNaN(price)) {
+                            productListArray[index].price = price;
+                            saveProductList();
+                            updateTotalSpent();
+                        }
+                    });
+                });
+            }
+
+            // Función para eliminar un producto
+            window.removeProduct = (index) => {
+                productListArray.splice(index, 1);
+                saveProductList();
+                updateProductList();
+                updateTotalSpent();
+            };
+
+            // Función para actualizar el total gastado
+            function updateTotalSpent() {
+                let total = 0;
+                productListArray.forEach(product => {
+                    total += product.price * product.quantity;
+                });
+                totalSpentElement.textContent = total.toFixed(2);
+            }
+
+            // Función para finalizar compras y guardar en el historial
+            finalizePurchaseButton.addEventListener('click', () => {
+                productListArray.forEach(product => {
+                    const total = product.price * product.quantity;
+                    const purchase = {
+                        date: new Date().toLocaleString(),
+                        product: product.name,
+                        quantity: product.quantity,
+                        price: product.price,
+                        total: total.toFixed(2),
+                    };
+                    purchaseHistory.push(purchase);
+                });
+                localStorage.setItem('purchaseHistory', JSON.stringify(purchaseHistory));
+                productListArray = []; // Limpiar la lista de compras después de finalizar
+                saveProductList();
+                updateProductList();
+                updateTotalSpent();
+                alert('Compras guardadas en el historial!');
+            });
+
+            // Función para ver el historial de compras
+            viewHistoryButton.addEventListener('click', () => {
+                purchaseHistoryList.innerHTML = '';
+                purchaseHistory.forEach(historyItem => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `${historyItem.date} - ${historyItem.product} x ${historyItem.quantity} - $${historyItem.total}`;
+                    purchaseHistoryList.appendChild(li);
+                });
+            });
+
+            // Función para limpiar el historial
+            clearHistoryButton.addEventListener('click', () => {
+                purchaseHistory = [];
+                localStorage.removeItem('purchaseHistory');
+                purchaseHistoryList.innerHTML = '';
+            });
+
+            // Función para limpiar todos los productos
+            clearProductsButton.addEventListener('click', () => {
+                productListArray = [];
+                saveProductList();
+                updateProductList();
+                updateTotalSpent();
+            });
+
+            // Guardar los productos en localStorage
+            function saveProductList() {
+                localStorage.setItem('productList', JSON.stringify(productListArray));
+            }
+        });
+    </script>
+</body>
+</html>
